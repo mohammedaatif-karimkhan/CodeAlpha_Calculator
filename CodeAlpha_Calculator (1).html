@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><title>Calculator</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>
+:root{--bg:#f4f1ff;--card:#fff;--tx:#1d1b3a;--mut:#6a6788;--pri:#6c47ff;--pri2:#9b7bff;--ln:#e5e1f7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#120f24;--card:#1d1938;--tx:#f1eeff;--mut:#a9a4cc;--ln:#2e2956;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#120f24;--card:#1d1938;--tx:#f1eeff;--mut:#a9a4cc;--ln:#2e2956;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+.app{max-width:460px;margin:auto;padding:18px}
+.top{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:18px;padding:18px;margin-bottom:16px}.top h1{margin:0;font-size:24px}.top small{opacity:.85}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:16px;margin-bottom:14px}
+</style>
+<style>.scr{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:18px;padding:16px 18px;margin-bottom:14px;text-align:right;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end}
+#e{opacity:.8;font-size:15px;min-height:22px}#d{font-size:44px;font-weight:700;overflow-x:auto;white-space:nowrap}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.pad button{border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:16px;font-size:22px;font-weight:600;padding:16px 0;cursor:pointer;transition:transform .1s,background .2s}
+.pad button:hover{background:var(--ln)}.pad button:active,.pad button.p{transform:scale(.92)}.pad .o{background:var(--pri);color:#fff;border-color:var(--pri)}.pad .c{color:#d64545}.pad .z{grid-column:span 2}
+#h{margin-top:14px;font-size:14px;color:var(--mut)}#h div{padding:4px 0;border-bottom:1px solid var(--ln);text-align:right}
+@media(prefers-color-scheme:dark){.pad .o{color:#120f24}}</style></head><body><div class="app">
+<div class="top"><small>Basic + keyboard support</small><h1>🧮 Calculator</h1></div>
+<div class="scr"><div id="e"></div><div id="d">0</div></div>
+<div class="pad" id="pad"><button class="c" data-k="C">C</button><button data-k="bs">⌫</button><button data-k="%">%</button><button class="o" data-k="/">÷</button>
+<button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button class="o" data-k="*">×</button>
+<button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button class="o" data-k="-">−</button>
+<button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button class="o" data-k="+">+</button>
+<button class="z" data-k="0">0</button><button data-k=".">.</button><button class="o" data-k="=">=</button></div>
+<div id="h"></div></div>
+<script>
+const $=i=>document.getElementById(i),S={'+':'+','-':'−','*':'×','/':'÷'};
+let cur='0',acc=null,op=null,fresh=false,err=false,H=[];
+const fmt=n=>{const s=parseFloat(n.toPrecision(12));return String(s)};
+const calc=(a,o,b)=>o=='+'?a+b:o=='-'?a-b:o=='*'?a*b:b===0?NaN:a/b;
+function show(){$('d').textContent=cur;$('d').style.fontSize=cur.length>14?'22px':cur.length>9?'30px':'44px';$('h').innerHTML=H.slice(-4).reverse().map(x=>'<div>'+x+'</div>').join('')}
+function reset(){cur='0';acc=null;op=null;fresh=false;err=false;$('e').textContent=''}
+function key(k){
+ if(err&&k!=='C'){reset()}
+ if(/^[0-9]$/.test(k)){if(fresh){cur='0';fresh=false}if(cur.replace(/[-.]/g,'').length>=14)return;cur=cur==='0'?k:cur+k}
+ else if(k==='.'){if(fresh){cur='0';fresh=false}if(!cur.includes('.'))cur+='.'}
+ else if(k==='C'){reset()}
+ else if(k==='bs'){if(!fresh)cur=cur.length>1?cur.slice(0,-1):'0'}
+ else if(k==='%'){cur=fmt(+cur/100)}
+ else if('+-*/'.includes(k)){
+  if(op&&!fresh){const r=calc(acc,op,+cur);if(isNaN(r)){cur='Cannot divide by 0';err=true;show();return}acc=r;cur=fmt(r)}else acc=+cur;
+  op=k;fresh=true;$('e').textContent=fmt(acc)+' '+S[k]}
+ else if(k==='='||k==='Enter'){
+  if(!op)return;const b=+cur,r=calc(acc,op,b);
+  if(isNaN(r)){cur='Cannot divide by 0';err=true;$('e').textContent='';op=null;show();return}
+  const t=fmt(acc)+' '+S[op]+' '+fmt(b);H.push(t+' = '+fmt(r));$('e').textContent=t+' =';cur=fmt(r);op=null;acc=null;fresh=true}
+ show()}
+$('pad').onclick=e=>{const b=e.target.closest('button');if(b)key(b.dataset.k)};
+document.addEventListener('keydown',e=>{let k=e.key;if(k==='Backspace')k='bs';else if(k==='Escape')k='C';else if(k==='Enter')k='=';
+ if(/^[0-9.+\-*\/%=]$/.test(k)||k==='bs'||k==='C'){e.preventDefault();key(k);const b=document.querySelector('[data-k="'+(k==='='?'=':k)+'"]');if(b){b.classList.add('p');setTimeout(()=>b.classList.remove('p'),120)}}});
+show();
+</script></body></html>
